@@ -1,0 +1,26 @@
+{
+    "exemple1": {
+        "longitude": 2.351092,
+        "latitude": 48.891123,
+        "code_postal": 75018,
+        "code_type_local": 2,
+        "lot1_surface_carrez": 9.92,
+        "nombre_pieces_principales": 1
+    },
+    "exemple2": {
+        "longitude": 2.347055,
+        "latitude": 48.847517,
+        "code_postal": 75005,
+        "code_type_local": 2,
+        "lot1_surface_carrez": 35.0,
+        "nombre_pieces_principales": 2
+    },
+    "exemple3": {
+        "longitude": 2.364113,
+        "latitude": 48.878319,
+        "code_postal": 75010,
+        "code_type_local": 2,
+        "lot1_surface_carrez": 85.0,
+        "nombre_pieces_principales": 4
+    }
+}
