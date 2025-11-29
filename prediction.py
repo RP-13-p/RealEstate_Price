@@ -39,3 +39,7 @@ def predire_valeur_fonciere(input_data):
     
     return prediction[0] if len(prediction) == 1 else prediction
 
+
+
+
+
