@@ -2,7 +2,8 @@ import { useState } from 'react'
 import axios from 'axios'
 import './App.css'
 
-const API_BASE = 'http://localhost:8000/api'
+// URL backend depuis Vercel / .env local
+const API_URL = import.meta.env.VITE_API_URL;
 
 function App() {
   // État pour l'adresse
@@ -49,7 +50,11 @@ function App() {
   const handlePredict = async (e) => {
     e.preventDefault()
 
-    const requiredFields = [address.rue, address.ville, address.codePostal, property.codeTypeLocal, property.nombrePieces, property.surface]
+    const requiredFields = [
+      address.rue, address.ville, address.codePostal,
+      property.codeTypeLocal, property.nombrePieces, property.surface
+    ]
+    
     if (requiredFields.some(field => !field)) {
       showMessage('⚠️ Veuillez remplir tous les champs', 'warning')
       return
@@ -61,7 +66,7 @@ function App() {
 
     try {
       // Géolocaliser d'abord l'adresse automatiquement
-      const geocodeResponse = await axios.post(`${API_BASE}/geocode`, {
+      const geocodeResponse = await axios.post(`${API_URL}/api/geocode`, {
         numero: address.numero,
         rue: address.rue,
         ville: address.ville,
@@ -77,7 +82,7 @@ function App() {
       const { longitude, latitude } = geocodeResponse.data
 
       // Puis faire la prédiction
-      const response = await axios.post(`${API_BASE}/predict`, {
+      const response = await axios.post(`${API_URL}/api/predict`, {
         longitude: longitude,
         latitude: latitude,
         code_postal: parseInt(address.codePostal),
@@ -89,11 +94,15 @@ function App() {
       if (response.data.success) {
         setPrediction(response.data)
         showMessage('✓ Estimation calculée avec succès !', 'success')
-        // Scroll vers le résultat
+
         setTimeout(() => {
-          document.getElementById('result')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          document.getElementById('result')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+          })
         }, 100)
       }
+
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'Erreur lors de la prédiction'
       showMessage('❌ ' + errorMsg, 'error')
