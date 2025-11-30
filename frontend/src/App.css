@@ -293,6 +293,18 @@ footer {
   border-top: 1px solid var(--border);
 }
 
+footer a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+footer a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {
