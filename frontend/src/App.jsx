@@ -233,7 +233,7 @@ function App() {
         {/* Résultat */}
         {prediction && (
           <section className="card result-card" id="result">
-            <h2>📊 Estimation</h2>
+            <h2>Estimation</h2>
             <div className="result-content">
               <div className="result-value">
                 <span className="result-label">Valeur estimée:</span>
@@ -248,7 +248,12 @@ function App() {
       </div>
 
       <footer>
-        <p>© 2025 RealEstate Price - Estimation basée sur machine learning</p>
+        <p>
+          © 2025 RealEstate Price - Modèle developpé par{' '}
+          <a href="https://portofolio-partouche-pi.vercel.app/" target="_blank" rel="noopener noreferrer">
+            Raphael Partouche
+          </a>
+        </p>
       </footer>
     </div>
   )
