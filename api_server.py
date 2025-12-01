@@ -19,15 +19,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Charger le modèle
+# Charger le modèle et les données
 try:
     model = joblib.load('Training_set/best_model.pkl')
     features_list = joblib.load('Training_set/model_features.pkl')
-    print("✓ Modèle chargé avec succès")
+    df_data = pd.read_csv('DATA/donnees_immobilieres.csv')
+    print("✓ Modèle et données chargés avec succès")
 except Exception as e:
-    print(f"⚠️ Erreur lors du chargement du modèle: {e}")
+    print(f"⚠️ Erreur lors du chargement: {e}")
     model = None
     features_list = []
+    df_data = None
 
 
 # Modèles Pydantic pour la validation
@@ -148,11 +150,44 @@ def predict(request: PredictionRequest):
         
         # Prédiction
         prediction = model.predict(df_input)[0]
+        prix_m2 = prediction / request.lot1_surface_carrez
+        
+        # Récupérer l'historique des prix pour l'arrondissement
+        price_history = []
+        if df_data is not None:
+            try:
+                df_arrondissement = df_data[df_data['code_postal'] == request.code_postal].copy()
+                
+                if not df_arrondissement.empty and 'date_mutation' in df_arrondissement.columns:
+                    df_arrondissement['date_mutation'] = pd.to_datetime(df_arrondissement['date_mutation'], errors='coerce')
+                    df_arrondissement = df_arrondissement.dropna(subset=['date_mutation', 'prix_m_carrez'])
+                    df_arrondissement = df_arrondissement.sort_values('date_mutation')
+                    
+                    # Grouper par mois et calculer le prix moyen
+                    df_arrondissement['mois'] = df_arrondissement['date_mutation'].dt.to_period('M')
+                    prix_par_mois = df_arrondissement.groupby('mois')['prix_m_carrez'].mean()
+                    
+                    # Prendre les 12 derniers mois
+                    prix_par_mois = prix_par_mois.tail(12)
+                    
+                    price_history = [
+                        {
+                            "date": str(mois),
+                            "prix_m2": float(prix)
+                        }
+                        for mois, prix in prix_par_mois.items()
+                    ]
+            except Exception as e:
+                print(f"Erreur lors de la récupération de l'historique: {e}")
         
         return {
             "success": True,
             "prediction": float(prediction),
-            "prediction_formatted": f"{prediction:,.2f} €"
+            "prediction_formatted": f"{prediction:,.2f} €",
+            "prix_m2": float(prix_m2),
+            "prix_m2_formatted": f"{prix_m2:,.2f} €/m²",
+            "price_history": price_history,
+            "code_postal": request.code_postal
         }
         
     except HTTPException:
