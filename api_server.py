@@ -13,7 +13,12 @@ app = FastAPI(title="RealEstate Price API", version="1.0.0")
 # Configuration CORS pour permettre les requêtes depuis React
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # Ports React/Vite
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:5173",
+        "https://*.vercel.app",  # Autoriser tous les domaines Vercel
+        "https://realestate-price.vercel.app"  # Votre domaine de production
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
