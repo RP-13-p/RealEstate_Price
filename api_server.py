@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import pandas as pd
 import joblib
 from adresse import adresse_vers_coordonnees
+from pricing_adjustments import adjust_price, VALID_RENOVATION_STATES
 import uvicorn
 import os
 
@@ -47,6 +48,8 @@ class PredictionRequest(BaseModel):
     code_type_local: int
     lot1_surface_carrez: float
     nombre_pieces_principales: int
+    ascenseur: bool = True
+    etat_renovation: str = "standard"
 
 
 @app.get("/")
@@ -148,8 +151,23 @@ def predict(request: PredictionRequest):
         # Réordonner selon le modèle
         df_input = df_input[features_list]
         
-        # Prédiction
-        prediction = model.predict(df_input)[0]
+        # Prédiction ML brute
+        prediction_ml = model.predict(df_input)[0]
+        
+        # Validation de l'état de rénovation
+        if request.etat_renovation not in VALID_RENOVATION_STATES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"État de rénovation invalide. Valeurs acceptées: {VALID_RENOVATION_STATES}"
+            )
+        
+        # Appliquer les corrections métier post-prédiction
+        prediction = adjust_price(
+            price_ml=prediction_ml,
+            ascenseur=request.ascenseur,
+            etat_renovation=request.etat_renovation
+        )
+        
         prix_m2 = prediction / request.lot1_surface_carrez
         
         # Récupérer l'historique des prix pour l'arrondissement

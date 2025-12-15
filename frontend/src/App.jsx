@@ -19,7 +19,9 @@ function App() {
   const [property, setProperty] = useState({
     codeTypeLocal: '',
     nombrePieces: '',
-    surface: ''
+    surface: '',
+    ascenseur: true,
+    etatRenovation: 'standard'
   })
 
   // État pour le résultat
@@ -29,14 +31,43 @@ function App() {
   const [loadingPredict, setLoadingPredict] = useState(false)
   const [message, setMessage] = useState({ text: '', type: '' })
 
+  // États pour les sections expandables
+  const [expandedSections, setExpandedSections] = useState({
+    address: true,
+    characteristics: false,
+    condition: false
+  })
+
+  // Vérifier si l'adresse est complète
+  const isAddressComplete = address.rue && address.ville && address.codePostal
+
+  // Vérifier si les caractéristiques sont complètes
+  const isCharacteristicsComplete = property.codeTypeLocal && property.nombrePieces && property.surface
+
   // Gérer les changements d'adresse
   const handleAddressChange = (e) => {
-    setAddress({ ...address, [e.target.name]: e.target.value })
+    const newAddress = { ...address, [e.target.name]: e.target.value }
+    setAddress(newAddress)
+    
+    // Auto-expand la section caractéristiques si l'adresse est complète
+    if (newAddress.rue && newAddress.ville && newAddress.codePostal) {
+      setTimeout(() => {
+        setExpandedSections(prev => ({ ...prev, characteristics: true }))
+      }, 300)
+    }
   }
 
   // Gérer les changements de propriété
   const handlePropertyChange = (e) => {
-    setProperty({ ...property, [e.target.name]: e.target.value })
+    const newProperty = { ...property, [e.target.name]: e.target.value }
+    setProperty(newProperty)
+    
+    // Auto-expand la section état du bien si les caractéristiques sont complètes
+    if (newProperty.codeTypeLocal && newProperty.nombrePieces && newProperty.surface) {
+      setTimeout(() => {
+        setExpandedSections(prev => ({ ...prev, condition: true }))
+      }, 300)
+    }
   }
 
   // Afficher un message
@@ -89,7 +120,9 @@ function App() {
         code_postal: parseInt(address.codePostal),
         code_type_local: parseInt(property.codeTypeLocal),
         lot1_surface_carrez: parseFloat(property.surface),
-        nombre_pieces_principales: parseInt(property.nombrePieces)
+        nombre_pieces_principales: parseInt(property.nombrePieces),
+        ascenseur: property.ascenseur,
+        etat_renovation: property.etatRenovation
       })
 
       if (response.data.success) {
@@ -120,106 +153,178 @@ function App() {
       </header>
 
       <div className="container">
-        {/* Section Formulaire complet */}
+        {/* Section Formulaire avec sections progressives */}
         <section className="card">
           <h2>📍 Informations du bien</h2>
           <form onSubmit={handlePredict}>
-            <h3 className="section-title">Adresse</h3>
-            <div className="form-row">
-              <div className="form-group small">
-                <label>Numéro</label>
-                <input
-                  type="text"
-                  name="numero"
-                  value={address.numero}
-                  onChange={handleAddressChange}
-                  placeholder="112"
-                />
+            {/* Section 1: Adresse */}
+            <div className="form-section">
+              <div 
+                className="section-header"
+                onClick={() => setExpandedSections(prev => ({ ...prev, address: !prev.address }))}
+              >
+                <h3 className="section-title-expand">
+                  Adresse
+                </h3>
+                <span className={`expand-icon ${expandedSections.address ? 'expanded' : ''}`}>▼</span>
               </div>
-              <div className="form-group grow">
-                <label>Rue *</label>
-                <input
-                  type="text"
-                  name="rue"
-                  value={address.rue}
-                  onChange={handleAddressChange}
-                  placeholder="Avenue des Champs Elysées"
-                  required
-                />
+              
+              <div className={`section-content ${expandedSections.address ? 'expanded' : ''}`}>
+                <div className="form-row">
+                  <div className="form-group small">
+                    <label>Numéro</label>
+                    <input
+                      type="text"
+                      name="numero"
+                      value={address.numero}
+                      onChange={handleAddressChange}
+                      placeholder="112"
+                    />
+                  </div>
+                  <div className="form-group grow">
+                    <label>Rue *</label>
+                    <input
+                      type="text"
+                      name="rue"
+                      value={address.rue}
+                      onChange={handleAddressChange}
+                      placeholder="Avenue des Champs Elysées"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group grow">
+                    <label>Ville *</label>
+                    <input
+                      type="text"
+                      name="ville"
+                      value={address.ville}
+                      onChange={handleAddressChange}
+                      placeholder="Paris"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Code Postal *</label>
+                    <input
+                      type="text"
+                      name="codePostal"
+                      value={address.codePostal}
+                      onChange={handleAddressChange}
+                      placeholder="75008"
+                      maxLength="5"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group grow">
-                <label>Ville *</label>
-                <input
-                  type="text"
-                  name="ville"
-                  value={address.ville}
-                  onChange={handleAddressChange}
-                  placeholder="Paris"
-                  required
-                />
+            {/* Section 2: Caractéristiques */}
+            <div className="form-section">
+              <div 
+                className="section-header"
+                onClick={() => isAddressComplete && setExpandedSections(prev => ({ ...prev, characteristics: !prev.characteristics }))}
+                style={{ cursor: isAddressComplete ? 'pointer' : 'not-allowed', opacity: isAddressComplete ? 1 : 0.5 }}
+              >
+                <h3 className="section-title-expand">
+                  Caractéristiques
+                </h3>
+                <span className={`expand-icon ${expandedSections.characteristics ? 'expanded' : ''}`}>▼</span>
               </div>
-              <div className="form-group">
-                <label>Code Postal *</label>
-                <input
-                  type="text"
-                  name="codePostal"
-                  value={address.codePostal}
-                  onChange={handleAddressChange}
-                  placeholder="75008"
-                  maxLength="5"
-                  required
-                />
+              
+              <div className={`section-content ${expandedSections.characteristics ? 'expanded' : ''}`}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Type de local *</label>
+                    <select
+                      name="codeTypeLocal"
+                      value={property.codeTypeLocal}
+                      onChange={handlePropertyChange}
+                      required
+                    >
+                      <option value="">Sélectionnez...</option>
+                      <option value="1">Maison</option>
+                      <option value="2">Appartement</option>
+                      <option value="3">Dépendance</option>
+                      <option value="4">Local industriel/commercial</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Nombre de pièces *</label>
+                    <input
+                      type="number"
+                      name="nombrePieces"
+                      value={property.nombrePieces}
+                      onChange={handlePropertyChange}
+                      min="1"
+                      max="20"
+                      placeholder="3"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Surface Carré (m²) *</label>
+                    <input
+                      type="number"
+                      name="surface"
+                      value={property.surface}
+                      onChange={handlePropertyChange}
+                      min="1"
+                      step="0.01"
+                      placeholder="45.5"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Ascenseur</label>
+                    <select
+                      name="ascenseur"
+                      value={property.ascenseur}
+                      onChange={(e) => setProperty({...property, ascenseur: e.target.value === 'true'})}
+                    >
+                      <option value="true">Oui</option>
+                      <option value="false">Non</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <h3 className="section-title">Caractéristiques</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Type de local *</label>
-                <select
-                  name="codeTypeLocal"
-                  value={property.codeTypeLocal}
-                  onChange={handlePropertyChange}
-                  required
-                >
-                  <option value="">Sélectionnez...</option>
-                  <option value="1">Maison</option>
-                  <option value="2">Appartement</option>
-                  <option value="3">Dépendance</option>
-                  <option value="4">Local industriel/commercial</option>
-                </select>
+            {/* Section 3: État du bien */}
+            <div className="form-section">
+              <div 
+                className="section-header"
+                onClick={() => isCharacteristicsComplete && setExpandedSections(prev => ({ ...prev, condition: !prev.condition }))}
+                style={{ cursor: isCharacteristicsComplete ? 'pointer' : 'not-allowed', opacity: isCharacteristicsComplete ? 1 : 0.5 }}
+              >
+                <h3 className="section-title-expand">
+                  État du bien
+                </h3>
+                <span className={`expand-icon ${expandedSections.condition ? 'expanded' : ''}`}>▼</span>
               </div>
-              <div className="form-group">
-                <label>Nombre de pièces *</label>
-                <input
-                  type="number"
-                  name="nombrePieces"
-                  value={property.nombrePieces}
-                  onChange={handlePropertyChange}
-                  min="1"
-                  max="20"
-                  placeholder="3"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Surface Carré (m²) *</label>
-                <input
-                  type="number"
-                  name="surface"
-                  value={property.surface}
-                  onChange={handlePropertyChange}
-                  min="1"
-                  step="0.01"
-                  placeholder="45.5"
-                  required
-                />
+              
+              <div className={`section-content ${expandedSections.condition ? 'expanded' : ''}`}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>État de rénovation</label>
+                    <select
+                      name="etatRenovation"
+                      value={property.etatRenovation}
+                      onChange={handlePropertyChange}
+                    >
+                      <option value="tout_a_refaire">À rénover entièrement</option>
+                      <option value="rafraichissement">À rafraîchir</option>
+                      <option value="standard">État standard</option>
+                      <option value="refait_a_neuf">Refait à neuf</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -256,6 +361,7 @@ function App() {
                     <span className="result-m2-price">{prediction.prix_m2_formatted}</span>
                   </div>
                 )}
+                
                 <p className="result-info">
                   Cette estimation est basée sur les données historiques et les caractéristiques du bien.
                 </p>
@@ -431,7 +537,7 @@ function App() {
       <footer>
         <p>
           © 2025 RealEstate Price - Modèle developpé par{' '}
-          <a href="https://portofolio-partouche-pi.vercel.app/" target="_blank" rel="noopener noreferrer">
+          <a href="https://portfolio-partouche-pi.vercel.app/" target="_blank" rel="noopener noreferrer">
             Raphael Partouche
           </a>
         </p>
