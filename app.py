@@ -1,11 +1,16 @@
-from flask import Flask, render_template, request, jsonify
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
 import pandas as pd
 import numpy as np
 import joblib
 from adresse import adresse_vers_coordonnees
 import os
 
-app = Flask(__name__)
 
 # Charger le modèle et les features
 model = joblib.load('Training_set/best_model.pkl')
