@@ -437,6 +437,28 @@ body {
   color: #92400e;
 }
 
+/* Bouton Réessayer */
+.retry-button {
+  margin-left: 1rem;
+  padding: 0.5rem 1rem;
+  background: #991b1b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.retry-button:hover {
+  background: #7f1d1d;
+}
+
+.retry-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Footer */
 footer {
   text-align: center;

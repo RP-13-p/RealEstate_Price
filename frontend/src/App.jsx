@@ -138,11 +138,20 @@ function App() {
       }
 
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Erreur lors de la prédiction'
+      const isNetworkError = !error.response || error.code === 'ERR_NETWORK'
+      const errorMsg = isNetworkError 
+        ? '⏳ Le serveur démarre... Cliquez sur "Réessayer" dans quelques secondes.'
+        : error.response?.data?.detail || 'Erreur lors de la prédiction'
       showMessage('❌ ' + errorMsg, 'error')
     } finally {
       setLoadingPredict(false)
     }
+  }
+
+  // Fonction réessayer
+  const handleRetry = () => {
+    setMessage({ text: '', type: '' })
+    handlePredict({ preventDefault: () => {} })
   }
 
   return (
@@ -342,6 +351,15 @@ function App() {
         {message.text && (
           <div className={`message-box ${message.type}`}>
             {message.text}
+            {message.type === 'error' && (
+              <button 
+                className="retry-button" 
+                onClick={handleRetry}
+                disabled={loadingPredict}
+              >
+                🔄 Réessayer
+              </button>
+            )}
           </div>
         )}
 
