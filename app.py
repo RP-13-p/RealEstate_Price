@@ -1,128 +1,168 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import pandas as pd
+import joblib
+from adresse import adresse_vers_coordonnees
+from pricing_adjustments import adjust_price, VALID_RENOVATION_STATES
+import os
 
-app = FastAPI()
+# Créer l'application FastAPI
+app = FastAPI(title="RealEstate Price API", version="1.0.0")
+
+# Configuration CORS
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://real-estate-price-nine.vercel.app"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Charger le modèle et les données
+try:
+    model = joblib.load('Training_set/best_model.pkl')
+    features_list = joblib.load('Training_set/model_features.pkl')
+    df_data = pd.read_csv('DATA/donnees_immobilieres.csv')
+    print("✓ Modèle et données chargés avec succès")
+except Exception as e:
+    print(f"⚠️ Erreur lors du chargement: {e}")
+    model = None
+    features_list = []
+    df_data = None
+
+
+# Modèles Pydantic
+class GeocodeRequest(BaseModel):
+    numero: str = ""
+    rue: str
+    ville: str
+    pays: str = "France"
+
+
+class PredictionRequest(BaseModel):
+    longitude: float
+    latitude: float
+    code_postal: int
+    code_type_local: int
+    lot1_surface_carrez: float
+    nombre_pieces_principales: int
+    ascenseur: bool = True
+    etat_renovation: str = "standard"
+
 
 @app.get("/")
 def root():
-    return {"status": "ok"}
-import pandas as pd
-import numpy as np
-import joblib
-from adresse import adresse_vers_coordonnees
-import os
+    return {
+        "message": "RealEstate Price API",
+        "version": "1.0.0",
+        "endpoints": {
+            "geocode": "/api/geocode",
+            "predict": "/api/predict",
+            "features": "/api/features",
+            "health": "/api/health"
+        }
+    }
 
 
-# Charger le modèle et les features
-model = joblib.load('Training_set/best_model.pkl')
-features_list = joblib.load('Training_set/model_features.pkl')
+@app.get("/api/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "model_loaded": model is not None,
+        "features_count": len(features_list) if features_list else 0
+    }
 
 
-@app.route('/')
-def index():
-    """Page d'accueil avec le formulaire"""
-    return render_template('index.html', features=features_list)
+@app.get("/api/features")
+def get_features():
+    if not features_list:
+        raise HTTPException(status_code=500, detail="Modèle non chargé")
+    return {"success": True, "features": features_list}
 
 
-@app.route('/geocode', methods=['POST'])
-def geocode():
-    """
-    Endpoint pour convertir une adresse en coordonnées GPS
-    """
+@app.post("/api/geocode")
+def geocode(request: GeocodeRequest):
     try:
-        data = request.json
-        numero = data.get('numero', '')
-        rue = data.get('rue', '')
-        ville = data.get('ville', '')
-        pays = data.get('pays', 'France')
-        
-        coords = adresse_vers_coordonnees(numero, rue, ville, pays)
-        
+        coords = adresse_vers_coordonnees(
+            numero=request.numero,
+            rue=request.rue,
+            ville=request.ville,
+            pays=request.pays
+        )
         if coords:
-            return jsonify({
-                'success': True,
-                'longitude': coords[0],
-                'latitude': coords[1]
-            })
+            return {"success": True, "longitude": coords[0], "latitude": coords[1]}
         else:
-            return jsonify({
-                'success': False,
-                'message': 'Adresse non trouvée'
-            }), 404
-            
+            raise HTTPException(status_code=404, detail="Adresse non trouvée")
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        raise HTTPException(status_code=500, detail=f"Erreur géolocalisation: {str(e)}")
 
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    """
-    Endpoint pour faire une prédiction de valeur foncière
-    """
+@app.post("/api/predict")
+def predict(request: PredictionRequest):
+    if not model or not features_list:
+        raise HTTPException(status_code=500, detail="Modèle non disponible")
+    
     try:
-        data = request.json
+        data = {
+            "longitude": request.longitude,
+            "latitude": request.latitude,
+            "code_postal": request.code_postal,
+            "code_type_local": request.code_type_local,
+            "lot1_surface_carrez": request.lot1_surface_carrez,
+            "nombre_pieces_principales": request.nombre_pieces_principales
+        }
         
-        # Créer un DataFrame avec les données d'entrée
         df_input = pd.DataFrame([data])
-        
-        # Vérifier que toutes les features nécessaires sont présentes
         missing_features = set(features_list) - set(df_input.columns)
         if missing_features:
-            return jsonify({
-                'success': False,
-                'message': f'Features manquantes: {list(missing_features)}'
-            }), 400
+            raise HTTPException(status_code=400, detail=f"Features manquantes: {list(missing_features)}")
         
-        # Réordonner les colonnes selon l'ordre du modèle
         df_input = df_input[features_list]
+        prediction_ml = model.predict(df_input)[0]
         
-        # Faire la prédiction
-        prediction = model.predict(df_input)[0]
+        if request.etat_renovation not in VALID_RENOVATION_STATES:
+            raise HTTPException(status_code=400, detail=f"État invalide. Valeurs: {VALID_RENOVATION_STATES}")
         
-        return jsonify({
-            'success': True,
-            'prediction': float(prediction),
-            'prediction_formatted': f"{prediction:,.2f} €"
-        })
+        prediction = adjust_price(
+            price_ml=prediction_ml,
+            ascenseur=request.ascenseur,
+            etat_renovation=request.etat_renovation
+        )
         
+        prix_m2 = prediction / request.lot1_surface_carrez
+        
+        # Historique des prix
+        price_history = []
+        if df_data is not None:
+            try:
+                df_arr = df_data[df_data['code_postal'] == request.code_postal].copy()
+                if not df_arr.empty and 'date_mutation' in df_arr.columns:
+                    df_arr['date_mutation'] = pd.to_datetime(df_arr['date_mutation'], errors='coerce')
+                    df_arr = df_arr.dropna(subset=['date_mutation', 'prix_m_carrez'])
+                    df_arr['mois'] = df_arr['date_mutation'].dt.to_period('M')
+                    prix_par_mois = df_arr.groupby('mois')['prix_m_carrez'].mean().tail(12)
+                    price_history = [{"date": str(m), "prix_m2": float(p)} for m, p in prix_par_mois.items()]
+            except Exception as e:
+                print(f"Erreur historique: {e}")
+        
+        return {
+            "success": True,
+            "prediction": float(prediction),
+            "prediction_formatted": f"{prediction:,.2f} €",
+            "prix_m2": float(prix_m2),
+            "prix_m2_formatted": f"{prix_m2:,.2f} €/m²",
+            "price_history": price_history,
+            "code_postal": request.code_postal
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
-
-
-@app.route('/features', methods=['GET'])
-def get_features():
-    """
-    Retourne la liste des features nécessaires pour la prédiction
-    """
-    return jsonify({
-        'success': True,
-        'features': features_list
-    })
-
-
-if __name__ == '__main__':
-    # Vérifier que les fichiers du modèle existent
-    if not os.path.exists('Training_set/best_model.pkl'):
-        print("ERREUR: Le fichier 'Training_set/best_model.pkl' n'existe pas.")
-        print("Veuillez d'abord entraîner le modèle avec model/model.py")
-        exit(1)
-    
-    if not os.path.exists('Training_set/model_features.pkl'):
-        print("ERREUR: Le fichier 'Training_set/model_features.pkl' n'existe pas.")
-        print("Veuillez d'abord entraîner le modèle avec model/model.py")
-        exit(1)
-    
-    print("\n" + "="*60)
-    print("Application Web d'Estimation Immobilière")
-    print("="*60)
-    print("\nLe serveur démarre sur: http://127.0.0.1:5000")
-    print("Ouvrez cette URL dans votre navigateur.\n")
-    print("Appuyez sur Ctrl+C pour arrêter le serveur.")
-    print("="*60 + "\n")
-    
-    app.run(debug=True, host='0.0.0.0', port=5000)
+        raise HTTPException(status_code=500, detail=f"Erreur prédiction: {str(e)}")
