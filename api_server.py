@@ -12,12 +12,19 @@ import os
 app = FastAPI(title="RealEstate Price API", version="1.0.0")
 
 # Configuration CORS pour permettre les requêtes depuis React
+# Origines autorisées (développement local + production Vercel)
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://real-estate-price-nine.vercel.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Autoriser toutes les origines (à restreindre en production)
-    allow_credentials=False,  # Doit être False si allow_origins=["*"]
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Charger le modèle et les données
