@@ -97,12 +97,5 @@ def adresse_vers_coordonnees(numero: str = "", rue: str = "", ville: str = "",
     return geocodeur.obtenir_coordonnees(numero, rue, ville, pays)
 
 
-# Exemple d'utilisation
-if __name__ == "__main__":
-    # Test avec la classe
-    geocodeur = GeocodeurAdresse()
-    
-    # Exemple 1: Adresse complète
-    coords = geocodeur.obtenir_coordonnees("13", "rue lasson", "Paris")
-    print(f"Coordonnées Champs-Élysées: {coords}")
+
    

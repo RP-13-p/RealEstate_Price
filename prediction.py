@@ -9,19 +9,6 @@ features_list = joblib.load('Training_set/model_features.pkl')
 
 
 def predire_valeur_fonciere(input_data):
-    """
-    Prédit la valeur foncière d'un bien immobilier
-    
-    Parameters:
-    -----------
-    input_data : dict ou pd.DataFrame
-        Les caractéristiques du bien immobilier
-        Doit contenir toutes les features utilisées lors de l'entraînement
-    
-    Returns:
-    --------
-    float : La valeur foncière prédite en euros
-    """
     # Convertir en DataFrame si nécessaire
     if isinstance(input_data, dict):
         df_input = pd.DataFrame([input_data])

@@ -42,7 +42,6 @@ def adjust_price(price_ml: float,ascenseur: bool = True,etat_renovation: str = "
     return price_final
 
 
-# États de rénovation valides (pour validation externe)
 VALID_RENOVATION_STATES = [
     "tout_a_refaire",
     "rafraichissement",
@@ -50,26 +49,3 @@ VALID_RENOVATION_STATES = [
     "refait_a_neuf"
 ]
 
-
-if __name__ == "__main__":
-    # Tests rapides pour vérifier le bon fonctionnement
-    print("=" * 70)
-    print("Tests du module pricing_adjustments")
-    print("=" * 70)
-    
-    test_cases = [
-        (500_000, True, "standard"),
-        (500_000, False, "standard"),
-        (500_000, True, "refait_a_neuf"),
-        (500_000, False, "tout_a_refaire"),
-        (300_000, False, "rafraichissement"),
-        (1_000_000, False, "refait_a_neuf"),
-    ]
-    
-    for price, asc, etat in test_cases:
-        price_final = adjust_price(price, asc, etat)
-        variation = ((price_final - price) / price) * 100
-        print(f"\nPrix ML: {price:>12,} € | Ascenseur: {str(asc):>5} | État: {etat}")
-        print(f"  → Prix final: {price_final:>12,.2f} € ({variation:+.2f}%)")
-    
-    print("\n" + "=" * 70)

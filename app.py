@@ -30,9 +30,9 @@ try:
     model = joblib.load('Training_set/best_model.pkl')
     features_list = joblib.load('Training_set/model_features.pkl')
     df_data = pd.read_csv('DATA/donnees_immobilieres.csv')
-    print("✓ Modèle et données chargés avec succès")
+    print("Good")
 except Exception as e:
-    print(f"⚠️ Erreur lors du chargement: {e}")
+    print(f"Erreur lors du chargement: {e}")
     model = None
     features_list = []
     df_data = None
