@@ -23,30 +23,29 @@ wheels/
 .installed.cfg
 *.egg
 
-# Flask
-instance/
-.webassets-cache
+# Environment variables
+.env
+.env.local
 
-# PyCharm
+# Editors
 .idea/
-
-# VS Code
 .vscode/
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Environment variables
-.env
-.env.local
-
 # OS
 .DS_Store
 Thumbs.db
 
-# Data files (optional - uncomment if you don't want to track data)
-# DATA/
-# Training_set/
-
 # Logs
 *.log
+
+# Dataset - download instructions in README, not versioned
+DATA/*.csv
+
+# Trained models - regenerate via model/model.py, not versioned
+Training_set/*.pkl
+
+# Exploratory scripts superseded by model/, kept locally only
+PLUS/

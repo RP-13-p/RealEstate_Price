@@ -1,5 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Vite cache
+.vite/
+.DATA/
 
 # Environment variables
-.env.local
 .env
+.env.local
+.env.*.local
 
+# Vercel
+.vercel/
+
+# Editor
+*.local
+
+# Logs
+npm-debug.log*
