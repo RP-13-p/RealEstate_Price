@@ -1,9 +1,12 @@
+"""Nettoie le fichier DVF brut (DATA/dvf.csv) et l'enrichit d'un score de
+proximité aux transports en commun, pour produire DATA/donnees_immobilieres.csv
+utilisé par model.py et cross_validation.py."""
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import BallTree
 
 df_v1 = pd.read_csv('DATA/dvf.csv', encoding='utf-8')
-print(df_v1.columns)
+print(f"Colonnes source: {list(df_v1.columns)}")
 
 df_clean = df_v1[[
     "date_mutation",
@@ -48,16 +51,17 @@ coords = np.radians(df_metro_clean[["Latitude", "Longitude"]].to_numpy())
 tree = BallTree(coords, metric="haversine")
 
 def score_transport(lat, lon):
+    """Score de 1 (loin) à 5 (proche) selon la distance à la station de métro la plus proche."""
     point = np.radians([[lat, lon]])
-    dist, _ = tree.query(point, k=1)  
-    d_km = dist[0][0] * 6371 
-    if d_km < 0.150: 
+    dist, _ = tree.query(point, k=1)
+    d_km = dist[0][0] * 6371
+    if d_km < 0.150:
         return 5
-    if d_km < 0.400: 
+    if d_km < 0.400:
         return 4
-    if d_km < 0.800: 
+    if d_km < 0.800:
         return 3
-    if d_km < 1.500: 
+    if d_km < 1.500:
         return 2
     return 1
 
@@ -68,13 +72,11 @@ df_clean.loc[mask, 'score_transport'] = df_clean[mask].apply(lambda row: score_t
 prix_moyen_par_arrondissement = df_clean.groupby('code_postal')['prix_m_carrez'].mean().to_dict()
 df_clean['prix_m_carrez_arr'] = df_clean['code_postal'].map(prix_moyen_par_arrondissement)
 
-# Suppression des prix exorbitants (>50% de la moyenne de l'arrondissement)
-seuil_max = 1.50  # 150% de la moyenne de l'arrondissement
+# Suppression des prix exorbitants (>150% de la moyenne de l'arrondissement)
+seuil_max = 1.50
 df_clean['ratio_prix'] = df_clean['prix_m_carrez'] / df_clean['prix_m_carrez_arr']
-nb_avant = len(df_clean)
 df_clean = df_clean[df_clean['ratio_prix'] <= seuil_max]
 df_clean = df_clean.drop(columns=['ratio_prix'])
-
 
 print(df_clean["score_transport"].value_counts())
 df_clean.to_csv('DATA/donnees_immobilieres.csv', index=False, encoding='utf-8')

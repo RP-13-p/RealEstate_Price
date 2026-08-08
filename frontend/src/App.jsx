@@ -2,12 +2,10 @@ import { useState } from 'react'
 import axios from 'axios'
 import './App.css'
 
-// URL backend depuis Vercel / .env local
+// URL backend : configurée via VITE_API_URL en production, localhost en dev
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-console.log('🔗 API_URL:', API_URL);
 
 function App() {
-  // État pour l'adresse
   const [address, setAddress] = useState({
     numero: '',
     rue: '',
@@ -15,7 +13,6 @@ function App() {
     codePostal: ''
   })
 
-  // État pour les caractéristiques du bien
   const [property, setProperty] = useState({
     codeTypeLocal: '',
     nombrePieces: '',
@@ -24,27 +21,21 @@ function App() {
     etatRenovation: 'standard'
   })
 
-  // État pour le résultat
   const [prediction, setPrediction] = useState(null)
 
-  // États de chargement et messages
   const [loadingPredict, setLoadingPredict] = useState(false)
   const [message, setMessage] = useState({ text: '', type: '' })
 
-  // États pour les sections expandables
   const [expandedSections, setExpandedSections] = useState({
     address: true,
     characteristics: false,
     condition: false
   })
 
-  // Vérifier si l'adresse est complète
   const isAddressComplete = address.rue && address.ville && address.codePostal
 
-  // Vérifier si les caractéristiques sont complètes
   const isCharacteristicsComplete = property.codeTypeLocal && property.nombrePieces && property.surface
 
-  // Gérer les changements d'adresse
   const handleAddressChange = (e) => {
     const newAddress = { ...address, [e.target.name]: e.target.value }
     setAddress(newAddress)
@@ -57,7 +48,6 @@ function App() {
     }
   }
 
-  // Gérer les changements de propriété
   const handlePropertyChange = (e) => {
     const newProperty = { ...property, [e.target.name]: e.target.value }
     setProperty(newProperty)
@@ -70,7 +60,6 @@ function App() {
     }
   }
 
-  // Afficher un message
   const showMessage = (text, type = 'info') => {
     setMessage({ text, type })
     if (type === 'success') {
@@ -78,7 +67,6 @@ function App() {
     }
   }
 
-  // Faire la prédiction
   const handlePredict = async (e) => {
     e.preventDefault()
 
@@ -88,7 +76,7 @@ function App() {
     ]
     
     if (requiredFields.some(field => !field)) {
-      showMessage('⚠️ Veuillez remplir tous les champs', 'warning')
+      showMessage('Veuillez remplir tous les champs', 'warning')
       return
     }
 
@@ -106,7 +94,7 @@ function App() {
       })
 
       if (!geocodeResponse.data.success) {
-        showMessage('❌ Impossible de géolocaliser cette adresse', 'error')
+        showMessage('Impossible de géolocaliser cette adresse', 'error')
         setLoadingPredict(false)
         return
       }
@@ -127,7 +115,7 @@ function App() {
 
       if (response.data.success) {
         setPrediction(response.data)
-        showMessage('✓ Estimation calculée avec succès !', 'success')
+        showMessage('Estimation calculée avec succès', 'success')
 
         setTimeout(() => {
           document.getElementById('result')?.scrollIntoView({
@@ -139,16 +127,15 @@ function App() {
 
     } catch (error) {
       const isNetworkError = !error.response || error.code === 'ERR_NETWORK'
-      const errorMsg = isNetworkError 
-        ? '⏳ Le serveur démarre... Cliquez sur "Réessayer" dans quelques secondes.'
+      const errorMsg = isNetworkError
+        ? 'Le serveur démarre... Cliquez sur "Réessayer" dans quelques secondes.'
         : error.response?.data?.detail || 'Erreur lors de la prédiction'
-      showMessage('❌ ' + errorMsg, 'error')
+      showMessage(errorMsg, 'error')
     } finally {
       setLoadingPredict(false)
     }
   }
 
-  // Fonction réessayer
   const handleRetry = () => {
     setMessage({ text: '', type: '' })
     handlePredict({ preventDefault: () => {} })
@@ -164,7 +151,7 @@ function App() {
       <div className="container">
         {/* Section Formulaire avec sections progressives */}
         <section className="card">
-          <h2>📍 Informations du bien</h2>
+          <h2>Informations du bien</h2>
           <form onSubmit={handlePredict}>
             {/* Section 1: Adresse */}
             <div className="form-section">
@@ -342,7 +329,7 @@ function App() {
               className="btn btn-primary"
               disabled={loadingPredict}
             >
-              {loadingPredict ? '⏳ Calcul en cours...' : ' Estimer la valeur'}
+              {loadingPredict ? 'Calcul en cours...' : 'Estimer la valeur'}
             </button>
           </form>
         </section>
@@ -352,12 +339,12 @@ function App() {
           <div className={`message-box ${message.type}`}>
             {message.text}
             {message.type === 'error' && (
-              <button 
-                className="retry-button" 
+              <button
+                className="retry-button"
                 onClick={handleRetry}
                 disabled={loadingPredict}
               >
-                🔄 Réessayer
+                Réessayer
               </button>
             )}
           </div>
@@ -544,7 +531,7 @@ function App() {
                   </svg>
                 </div>
                 <p className="chart-info">
-                  💡 Évolution du prix moyen au m² dans l'arrondissement {prediction.code_postal} sur les 12 derniers mois disponibles.
+                  Évolution du prix moyen au m² dans l'arrondissement {prediction.code_postal} sur les 12 derniers mois disponibles.
                 </p>
               </section>
             )}

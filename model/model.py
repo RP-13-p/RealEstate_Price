@@ -1,4 +1,7 @@
-import pandas as pd 
+"""Entraîne le modèle Gradient Boosting sur le dataset prétraité et persiste
+le modèle + la liste ordonnée des features dans Training_set/, consommés
+ensuite par app.py pour l'inférence."""
+import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingRegressor
@@ -24,13 +27,9 @@ mae = mean_absolute_error(y_test, y_pred)
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 r2 = r2_score(y_test, y_pred)
 
-print(r2)
-print(mae)
-
+print(f"R²: {r2:.4f}")
+print(f"MAE: {mae:,.0f} €")
+print(f"RMSE: {rmse:,.0f} €")
 
 joblib.dump(gb_model, '../Training_set/best_model.pkl')
 joblib.dump(list(X.columns), '../Training_set/model_features.pkl')
-
-
-
-

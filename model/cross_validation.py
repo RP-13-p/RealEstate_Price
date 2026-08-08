@@ -1,3 +1,5 @@
+"""Validation croisée (K-Fold) du modèle sur un échantillon à 20% des données,
+pour estimer la variance des métriques sans réentraîner sur le dataset complet."""
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import cross_val_score, KFold
@@ -47,6 +49,6 @@ print(f"RMSE moyen: {rmse_scores.mean():,.0f} € (+/- {rmse_scores.std() * 2:,.
 
 print()
 print("=" * 60)
-print("✓ Cross-validation terminée!")
-print("Les résultats sont cohérents avec le modèle entraîné." if r2_scores.mean() > 0.8 else "Attention: performances plus faibles")
+print("Cross-validation terminée.")
+print("Résultats cohérents avec le modèle entraîné." if r2_scores.mean() > 0.8 else "Attention: performances plus faibles")
 print("=" * 60)

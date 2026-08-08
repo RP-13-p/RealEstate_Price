@@ -1,4 +1,7 @@
 def apply_ascenseur(price_estime: float, ascenseur: bool) -> float:
+    """Pénalise l'absence d'ascenseur. La pénalité décroît avec le prix (courbe
+    logistique centrée sur p0) : un bien cher est moins sensible à ce critère
+    qu'un petit bien, où l'ascenseur pèse proportionnellement plus."""
     if ascenseur:
         return price_estime
 
@@ -12,7 +15,8 @@ def apply_ascenseur(price_estime: float, ascenseur: bool) -> float:
 
 
 def apply_renovation(price: float, etat: str) -> float:
-    
+    """Ajuste le prix selon l'état de rénovation, avec la même courbe logistique
+    que apply_ascenseur (l'effet de l'état du bien s'atténue aux prix élevés)."""
     p0 = 600_000
     k = 1.6
 
@@ -28,17 +32,15 @@ def apply_renovation(price: float, etat: str) -> float:
     return price * (1 + delta)
 
 
-def adjust_price(price_ml: float,ascenseur: bool = True,etat_renovation: str = "standard"):
-
+def adjust_price(price_ml: float, ascenseur: bool = True, etat_renovation: str = "standard") -> float:
+    """Applique les corrections métier (ascenseur puis rénovation) à la valeur
+    brute renvoyée par le modèle ML."""
     if price_ml <= 0:
         raise ValueError(f"Le prix ML doit être strictement positif (reçu: {price_ml})")
-    
-    # Étape 1 : Correction ascenseur
+
     price_after_ascenseur = apply_ascenseur(price_ml, ascenseur)
-    
-    # Étape 2 : Correction rénovation
     price_final = apply_renovation(price_after_ascenseur, etat_renovation)
-    
+
     return price_final
 
 
