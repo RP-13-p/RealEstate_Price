@@ -2,7 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import './App.css'
 
-// URL backend : configurée via VITE_API_URL en production, localhost en dev
+// Set via VITE_API_URL in production, defaults to localhost in dev
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function App() {
@@ -40,7 +40,7 @@ function App() {
     const newAddress = { ...address, [e.target.name]: e.target.value }
     setAddress(newAddress)
     
-    // Auto-expand la section caractéristiques si l'adresse est complète
+    // Auto-expand the next section once the address is complete
     if (newAddress.rue && newAddress.ville && newAddress.codePostal) {
       setTimeout(() => {
         setExpandedSections(prev => ({ ...prev, characteristics: true }))
@@ -52,7 +52,7 @@ function App() {
     const newProperty = { ...property, [e.target.name]: e.target.value }
     setProperty(newProperty)
     
-    // Auto-expand la section état du bien si les caractéristiques sont complètes
+    // Auto-expand the next section once the characteristics are complete
     if (newProperty.codeTypeLocal && newProperty.nombrePieces && newProperty.surface) {
       setTimeout(() => {
         setExpandedSections(prev => ({ ...prev, condition: true }))
@@ -85,7 +85,6 @@ function App() {
     setPrediction(null)
 
     try {
-      // Géolocaliser d'abord l'adresse automatiquement
       const geocodeResponse = await axios.post(`${API_URL}/api/geocode`, {
         numero: address.numero,
         rue: address.rue,
@@ -101,7 +100,6 @@ function App() {
 
       const { longitude, latitude } = geocodeResponse.data
 
-      // Puis faire la prédiction
       const response = await axios.post(`${API_URL}/api/predict`, {
         longitude: longitude,
         latitude: latitude,
@@ -149,11 +147,9 @@ function App() {
       </header>
 
       <div className="container">
-        {/* Section Formulaire avec sections progressives */}
         <section className="card">
           <h2>Informations du bien</h2>
           <form onSubmit={handlePredict}>
-            {/* Section 1: Adresse */}
             <div className="form-section">
               <div 
                 className="section-header"
@@ -218,7 +214,6 @@ function App() {
               </div>
             </div>
 
-            {/* Section 2: Caractéristiques */}
             <div className="form-section">
               <div 
                 className="section-header"
@@ -292,7 +287,6 @@ function App() {
               </div>
             </div>
 
-            {/* Section 3: État du bien */}
             <div className="form-section">
               <div 
                 className="section-header"
@@ -334,7 +328,6 @@ function App() {
           </form>
         </section>
 
-        {/* Messages */}
         {message.text && (
           <div className={`message-box ${message.type}`}>
             {message.text}
@@ -350,192 +343,26 @@ function App() {
           </div>
         )}
 
-        {/* Résultat */}
         {prediction && (
-          <>
-            <section className="card result-card" id="result">
-              <h2>Estimation</h2>
-              <div className="result-content">
-                <div className="result-value">
-                  <span className="result-label">Valeur estimée:</span>
-                  <span className="result-price">{prediction.prediction_formatted}</span>
-                </div>
-                {prediction.prix_m2_formatted && (
-                  <div className="result-m2">
-                    <span className="result-m2-label">Prix au m²:</span>
-                    <span className="result-m2-price">{prediction.prix_m2_formatted}</span>
-                  </div>
-                )}
-                
-                <p className="result-info">
-                  Cette estimation est basée sur les données historiques et les caractéristiques du bien.
-                </p>
+          <section className="card result-card" id="result">
+            <h2>Estimation</h2>
+            <div className="result-content">
+              <div className="result-value">
+                <span className="result-label">Valeur estimée:</span>
+                <span className="result-price">{prediction.prediction_formatted}</span>
               </div>
-            </section>
-
-            {/* Graphique des prix */}
-            {prediction.price_history && prediction.price_history.length > 0 && (
-              <section className="card chart-card">
-                <h2>Évolution des prix au m² - Arrondissement {prediction.code_postal}</h2>
-                <div className="chart-container">
-                  <svg viewBox="0 0 800 400" className="price-chart">
-                    {/* Grille horizontale */}
-                    {[0, 1, 2, 3, 4, 5].map(i => (
-                      <line
-                        key={`grid-${i}`}
-                        x1="80"
-                        y1={50 + i * 60}
-                        x2="750"
-                        y2={50 + i * 60}
-                        stroke="#e2e8f0"
-                        strokeWidth="1"
-                        strokeDasharray="5,5"
-                      />
-                    ))}
-                    
-                    {/* Axes */}
-                    <line x1="80" y1="350" x2="750" y2="350" stroke="#64748b" strokeWidth="2" />
-                    <line x1="80" y1="50" x2="80" y2="350" stroke="#64748b" strokeWidth="2" />
-                    
-                    {/* Courbe des prix */}
-                    {(() => {
-                      const prices = prediction.price_history.map(p => p.prix_m2);
-                      const minPrice = Math.min(...prices) * 0.95;
-                      const maxPrice = Math.max(...prices) * 1.05;
-                      const priceRange = maxPrice - minPrice || 1;
-                      const pointWidth = 670 / (prices.length - 1 || 1);
-                      
-                      const points = prices.map((price, i) => {
-                        const x = 80 + i * pointWidth;
-                        const y = 350 - ((price - minPrice) / priceRange) * 300;
-                        return `${x},${y}`;
-                      }).join(' ');
-                      
-                      // Points pour l'aire sous la courbe
-                      const areaPoints = `80,350 ${points} ${80 + (prices.length - 1) * pointWidth},350`;
-                      
-                      return (
-                        <>
-                          {/* Aire sous la courbe */}
-                          <polygon
-                            points={areaPoints}
-                            fill="url(#priceGradient)"
-                            opacity="0.3"
-                          />
-                          
-                          {/* Définition du gradient */}
-                          <defs>
-                            <linearGradient id="priceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.8" />
-                              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.1" />
-                            </linearGradient>
-                          </defs>
-                          
-                          {/* Ligne de la courbe */}
-                          <polyline
-                            points={points}
-                            fill="none"
-                            stroke="#2563eb"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          
-                          {/* Points sur la courbe */}
-                          {prices.map((price, i) => {
-                            const x = 80 + i * pointWidth;
-                            const y = 350 - ((price - minPrice) / priceRange) * 300;
-                            const isLast = i === prices.length - 1;
-                            return (
-                              <g key={`point-${i}`}>
-                                <circle
-                                  cx={x}
-                                  cy={y}
-                                  r={isLast ? "6" : "4"}
-                                  fill={isLast ? "#10b981" : "#2563eb"}
-                                  stroke="white"
-                                  strokeWidth="2"
-                                />
-                                {isLast && (
-                                  <text
-                                    x={x}
-                                    y={y - 15}
-                                    textAnchor="middle"
-                                    fill="#10b981"
-                                    fontSize="13"
-                                    fontWeight="bold"
-                                  >
-                                    Actuel
-                                  </text>
-                                )}
-                              </g>
-                            );
-                          })}
-                          
-                          {/* Labels des dates */}
-                          {prediction.price_history.map((item, i) => {
-                            const x = 80 + i * pointWidth;
-                            const shouldShow = prices.length <= 6 || i % 2 === 0 || i === prices.length - 1;
-                            if (shouldShow) {
-                              return (
-                                <text
-                                  key={`date-${i}`}
-                                  x={x}
-                                  y="370"
-                                  textAnchor="middle"
-                                  fill="#64748b"
-                                  fontSize="12"
-                                  transform={`rotate(-45, ${x}, 370)`}
-                                >
-                                  {item.date.substring(0, 7)}
-                                </text>
-                              );
-                            }
-                            return null;
-                          })}
-                          
-                          {/* Labels des prix sur l'axe Y */}
-                          {[0, 1, 2, 3, 4, 5].map(i => {
-                            const price = minPrice + (priceRange * i / 5);
-                            const y = 350 - (i * 60);
-                            return (
-                              <text
-                                key={`price-${i}`}
-                                x="70"
-                                y={y + 5}
-                                textAnchor="end"
-                                fill="#64748b"
-                                fontSize="12"
-                                fontWeight="500"
-                              >
-                                {Math.round(price).toLocaleString()}€
-                              </text>
-                            );
-                          })}
-                          
-                          {/* Titre axe Y */}
-                          <text
-                            x="20"
-                            y="200"
-                            textAnchor="middle"
-                            fill="#64748b"
-                            fontSize="13"
-                            fontWeight="600"
-                            transform="rotate(-90, 20, 200)"
-                          >
-                            Prix au m² (€)
-                          </text>
-                        </>
-                      );
-                    })()}
-                  </svg>
+              {prediction.prix_m2_formatted && (
+                <div className="result-m2">
+                  <span className="result-m2-label">Prix au m²:</span>
+                  <span className="result-m2-price">{prediction.prix_m2_formatted}</span>
                 </div>
-                <p className="chart-info">
-                  Évolution du prix moyen au m² dans l'arrondissement {prediction.code_postal} sur les 12 derniers mois disponibles.
-                </p>
-              </section>
-            )}
-          </>
+              )}
+
+              <p className="result-info">
+                Cette estimation est basée sur les données historiques et les caractéristiques du bien.
+              </p>
+            </div>
+          </section>
         )}
       </div>
 

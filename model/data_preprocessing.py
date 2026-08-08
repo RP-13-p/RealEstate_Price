@@ -1,6 +1,6 @@
-"""Nettoie le fichier DVF brut (DATA/dvf.csv) et l'enrichit d'un score de
-proximité aux transports en commun, pour produire DATA/donnees_immobilieres.csv
-utilisé par model.py et cross_validation.py."""
+"""Cleans the raw DVF file (DATA/dvf.csv) and enriches it with a public-transport
+proximity score, producing DATA/donnees_immobilieres.csv, used by model.py and
+cross_validation.py."""
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import BallTree
@@ -51,7 +51,7 @@ coords = np.radians(df_metro_clean[["Latitude", "Longitude"]].to_numpy())
 tree = BallTree(coords, metric="haversine")
 
 def score_transport(lat, lon):
-    """Score de 1 (loin) à 5 (proche) selon la distance à la station de métro la plus proche."""
+    """Score from 1 (far) to 5 (close) based on distance to the nearest metro station."""
     point = np.radians([[lat, lon]])
     dist, _ = tree.query(point, k=1)
     d_km = dist[0][0] * 6371
@@ -72,7 +72,7 @@ df_clean.loc[mask, 'score_transport'] = df_clean[mask].apply(lambda row: score_t
 prix_moyen_par_arrondissement = df_clean.groupby('code_postal')['prix_m_carrez'].mean().to_dict()
 df_clean['prix_m_carrez_arr'] = df_clean['code_postal'].map(prix_moyen_par_arrondissement)
 
-# Suppression des prix exorbitants (>150% de la moyenne de l'arrondissement)
+# Drop outlier prices (>150% of the postal code's average)
 seuil_max = 1.50
 df_clean['ratio_prix'] = df_clean['prix_m_carrez'] / df_clean['prix_m_carrez_arr']
 df_clean = df_clean[df_clean['ratio_prix'] <= seuil_max]

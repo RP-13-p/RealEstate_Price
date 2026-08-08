@@ -44,8 +44,10 @@ Thumbs.db
 # Dataset - download instructions in README, not versioned
 DATA/*.csv
 
-# Trained models - regenerate via model/model.py, not versioned
+# Trained models - only the artifacts app.py actually loads at runtime are versioned
 Training_set/*.pkl
+!Training_set/best_model.pkl
+!Training_set/model_features.pkl
 
 # Exploratory scripts superseded by model/, kept locally only
 PLUS/

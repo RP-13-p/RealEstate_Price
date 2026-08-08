@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -5,11 +7,10 @@ import pandas as pd
 import joblib
 from adresse import adresse_vers_coordonnees
 from pricing_adjustments import adjust_price, VALID_RENOVATION_STATES
-import os
 
 app = FastAPI(title="RealEstate Price API", version="1.0.0")
 
-# Origines autorisées : dev local (Vite/CRA) + frontend de production sur Vercel
+# Local dev (Vite) + production frontend on Vercel
 allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
@@ -24,17 +25,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Chargés une fois au démarrage du process ; model/features_list restent None/vide
-# si les artefacts n'ont pas été générés (cf. model/model.py), ce que /api/health expose.
+# Loaded once at startup; model/features_list stay None/empty if the artifacts
+# are missing, which /api/health then reports. Absolute path since the working
+# directory isn't guaranteed to be the project root on every deployment target.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 try:
-    model = joblib.load('Training_set/best_model.pkl')
-    features_list = joblib.load('Training_set/model_features.pkl')
-    df_data = pd.read_csv('DATA/donnees_immobilieres.csv')
+    model = joblib.load(os.path.join(BASE_DIR, 'Training_set', 'best_model.pkl'))
+    features_list = joblib.load(os.path.join(BASE_DIR, 'Training_set', 'model_features.pkl'))
 except Exception as e:
     print(f"Erreur lors du chargement du modèle: {e}")
     model = None
     features_list = []
-    df_data = None
 
 
 class GeocodeRequest(BaseModel):
@@ -57,7 +58,6 @@ class PredictionRequest(BaseModel):
 
 @app.get("/")
 def root():
-    """Liste les endpoints disponibles."""
     return {
         "message": "RealEstate Price API",
         "version": "1.0.0",
@@ -72,7 +72,6 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    """Indique si le modèle et les features ont bien été chargés au démarrage."""
     return {
         "status": "healthy",
         "model_loaded": model is not None,
@@ -82,7 +81,6 @@ def health_check():
 
 @app.get("/api/features")
 def get_features():
-    """Retourne les features attendues par /api/predict, dans l'ordre du modèle."""
     if not features_list:
         raise HTTPException(status_code=500, detail="Modèle non chargé")
     return {"success": True, "features": features_list}
@@ -90,7 +88,6 @@ def get_features():
 
 @app.post("/api/geocode")
 def geocode(request: GeocodeRequest):
-    """Convertit une adresse en coordonnées GPS via l'API Nominatim/OSM."""
     try:
         coords = adresse_vers_coordonnees(
             numero=request.numero,
@@ -108,8 +105,8 @@ def geocode(request: GeocodeRequest):
 
 @app.post("/api/predict")
 def predict(request: PredictionRequest):
-    """Prédit la valeur foncière d'un bien : sortie du modèle ML puis ajustements
-    métier (ascenseur, état de rénovation) via pricing_adjustments.adjust_price."""
+    """Runs the ML model, then applies elevator/renovation business-rule
+    adjustments (see pricing_adjustments.adjust_price) to its raw output."""
     if not model or not features_list:
         raise HTTPException(status_code=500, detail="Modèle non disponible")
 
@@ -142,27 +139,12 @@ def predict(request: PredictionRequest):
 
         prix_m2 = prediction / request.lot1_surface_carrez
 
-        # Historique best-effort : une erreur ici ne doit pas faire échouer la prédiction principale
-        price_history = []
-        if df_data is not None:
-            try:
-                df_arr = df_data[df_data['code_postal'] == request.code_postal].copy()
-                if not df_arr.empty and 'date_mutation' in df_arr.columns:
-                    df_arr['date_mutation'] = pd.to_datetime(df_arr['date_mutation'], errors='coerce')
-                    df_arr = df_arr.dropna(subset=['date_mutation', 'prix_m_carrez'])
-                    df_arr['mois'] = df_arr['date_mutation'].dt.to_period('M')
-                    prix_par_mois = df_arr.groupby('mois')['prix_m_carrez'].mean().tail(12)
-                    price_history = [{"date": str(m), "prix_m2": float(p)} for m, p in prix_par_mois.items()]
-            except Exception as e:
-                print(f"Erreur historique: {e}")
-
         return {
             "success": True,
             "prediction": float(prediction),
             "prediction_formatted": f"{prediction:,.2f} €",
             "prix_m2": float(prix_m2),
             "prix_m2_formatted": f"{prix_m2:,.2f} €/m²",
-            "price_history": price_history,
             "code_postal": request.code_postal
         }
 

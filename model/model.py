@@ -1,6 +1,6 @@
-"""Entraîne le modèle Gradient Boosting sur le dataset prétraité et persiste
-le modèle + la liste ordonnée des features dans Training_set/, consommés
-ensuite par app.py pour l'inférence."""
+"""Trains the Gradient Boosting model on the preprocessed dataset and persists
+the model plus its ordered feature list to Training_set/, later consumed by
+app.py for inference."""
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -11,7 +11,7 @@ import joblib
 df = pd.read_csv('../DATA/donnees_immobilieres.csv')
 df = df.dropna(subset=['latitude', 'longitude', 'valeur_fonciere', 'score_transport', 'prix_m_carrez_arr'])
 
-# Exclure les colonnes liées au prix car elles ne doivent pas être des features d'entrée
+# Exclude price-derived columns: they must not leak into the input features
 colonnes_a_exclure = ['valeur_fonciere', 'prix_m_carrez', 'prix_m_carrez_arr', 'score_transport']
 X_all = df.drop(columns=colonnes_a_exclure, errors='ignore')
 X = X_all.select_dtypes(include=[np.number])
