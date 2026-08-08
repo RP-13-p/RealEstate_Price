@@ -1,6 +1,12 @@
 {
   "builds": [
-    { "src": "app.py", "use": "@vercel/python" }
+    {
+      "src": "app.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": ["Training_set/best_model.pkl", "Training_set/model_features.pkl"]
+      }
+    }
   ],
   "routes": [
     { "src": "/(.*)", "dest": "app.py" }
