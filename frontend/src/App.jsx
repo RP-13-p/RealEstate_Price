@@ -2,8 +2,9 @@ import { useState } from 'react'
 import axios from 'axios'
 import './App.css'
 
-// Set via VITE_API_URL in production, defaults to localhost in dev
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Set via VITE_API_URL in production, defaults to localhost in dev.
+// Trailing slash stripped: a "//api/..." URL breaks CORS preflight redirects.
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 function App() {
   const [address, setAddress] = useState({
